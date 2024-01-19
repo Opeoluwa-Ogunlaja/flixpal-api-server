@@ -12,7 +12,7 @@ const GoogleStrategy = require('passport-google-oauth2').Strategy;
 passport.use(new GoogleStrategy({
   clientID: GclientID,
   clientSecret: GclientSecret,
-  callbackURL: getUrlFromPath("google/callback", 'auth'),
+  callbackURL: getUrlFromPath("google/callback", 'auth', true),
   passReqToCallback: true
 },
   function (request, accessToken, refreshToken, profile, done) {
