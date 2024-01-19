@@ -6,9 +6,13 @@ const urlPoints = {
     auth: '/auth'
 }
 
-const getUrlFromPath = function(url, point = 'base', inFull){
-    return `${inFull && siteAddress}${baseAPIslug}${urlPoints[point]}${(url == '' || url == null) ? url : '/' + url}`
+
+
+const getUrlFromPath = function(url, point = 'base', inFull = false){
+    return `${inFull ? siteAddress : ''}${baseAPIslug}${urlPoints[point]}${(url == '' || url == null) ? url : '/' + url}`
 }
+
+console.log(getUrlFromPath('', 'auth'))
 
 module.exports = {
     getUrlFromPath
