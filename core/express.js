@@ -8,6 +8,7 @@ const { jwtSecret } = require("./config");
 const { mongoStore } = require('./sessionStore')
 const userRouter = require('../routes/usersRoute')
 const passport = require('passport')
+const { getUrlFromPath } = require('../utils/urlUtils')
 
 const app = express()
 
@@ -41,7 +42,7 @@ app.use(passport.session());
 
 app.use(cookieParser())
 
-app.use('/api/auth', userRouter)
+app.use(getUrlFromPath('', 'auth'), userRouter)
 
 // app.get('/', authMiddleware, mustAuthMiddleware, (req, res) => {
 //     return res.json({

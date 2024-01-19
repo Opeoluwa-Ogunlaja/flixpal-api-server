@@ -4,6 +4,7 @@ const { register, login } = require('../controllers/user')
 const { authMiddleware, mustAuthMiddleware } = require('../middlewares/auth/authMiddleware')
 const userRouter = express.Router()
 const passport = require('passport')
+const { getUrlFromPath } = require('../utils/urlUtils')
 
 // Signup route
 userRouter.post('/register', register)
@@ -23,10 +24,10 @@ userRouter.get('/google',
 // Call back route
 userRouter.get('/google/callback',
     passport.authenticate('google', {
-        failureRedirect: '/google-auth-failed',
+        failureRedirect: getUrlFromPath('google-auth-failed', 'auth'),
     }),
     function (req, res) {
-        res.redirect('/google-auth-success')
+        res.redirect(getUrlFromPath('google-auth-success', 'auth'))
 
     }
 );

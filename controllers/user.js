@@ -4,14 +4,15 @@ const validateMongodbId = require("../core/validateMongodbId");
 const User = require("../models/User");
 const { AppError } = require("../utils/AppErrors");
 const { served, GclientID, GclientSecret } = require("../core/config");
-const passport = require('passport')
+const passport = require('passport');
+const { getUrlFromPath } = require("../utils/urlUtils");
 const GoogleStrategy = require('passport-google-oauth2').Strategy;
 
 
 passport.use(new GoogleStrategy({
   clientID: GclientID,
   clientSecret: GclientSecret,
-  callbackURL: "https://flixpal-dev.onrender.com/api/auth/google/callback",
+  callbackURL: getUrlFromPath("google/callback", 'auth'),
   passReqToCallback: true
 },
   function (request, accessToken, refreshToken, profile, done) {
