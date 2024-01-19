@@ -41,7 +41,7 @@ app.use(passport.session());
 
 app.use(cookieParser())
 
-app.use('/api/users', userRouter)
+app.use('/api/auth', userRouter)
 
 // app.get('/', authMiddleware, mustAuthMiddleware, (req, res) => {
 //     return res.json({
