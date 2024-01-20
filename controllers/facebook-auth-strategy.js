@@ -3,8 +3,6 @@ const { served, FclientID, FclientSecret } = require("../core/config");
 const { getUrlFromPath } = require("../utils/urlUtils");
 const FacebookStrategy = require('passport-facebook').Strategy;
 
-console.log(FclientID, FclientSecret)
-
 passport.use(new FacebookStrategy({
     clientID: FclientID,
     clientSecret: FclientSecret,
