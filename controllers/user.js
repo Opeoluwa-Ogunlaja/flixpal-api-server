@@ -3,22 +3,10 @@ const generateToken = require("../core/generateToken");
 const validateMongodbId = require("../core/validateMongodbId");
 const User = require("../models/User");
 const { AppError } = require("../utils/AppErrors");
-const { served, GclientID, GclientSecret } = require("../core/config");
-const passport = require('passport');
-const { getUrlFromPath } = require("../utils/urlUtils");
-const GoogleStrategy = require('passport-google-oauth2').Strategy;
+const passport = require('passport')
 
-
-passport.use(new GoogleStrategy({
-  clientID: GclientID,
-  clientSecret: GclientSecret,
-  callbackURL: getUrlFromPath("google/callback", 'auth', true),
-  passReqToCallback: true
-},
-  function (request, accessToken, refreshToken, profile, done) {
-    return done(null, profile);
-  }
-));
+require('./facebook-auth-strategy');
+require('./google-auth-strategy');
 
 passport.serializeUser(function (user, done) {
   done(null, user);
@@ -27,6 +15,7 @@ passport.serializeUser(function (user, done) {
 passport.deserializeUser(function (user, done) {
   done(null, user);
 });
+
 
 //-------------------------------------
 // Register
@@ -55,6 +44,26 @@ const userRegisterCtrl = expressAsyncHandler(async (req, res) => {
     throw new AppError(error);
   }
 });
+
+// -------------------------------------
+// Google Auth Ctrls
+// -------------------------------------
+const googleAuthFailureCtrl = expressAsyncHandler(()=>{
+  throw new AppError("Google Authentication Failed")
+})
+const googleAuthSuccessCtrl = expressAsyncHandler((req, res)=>{
+  res.json(req.user)
+})
+
+// -------------------------------------
+// Facebook Auth Ctrls
+// -------------------------------------
+const facebookAuthFailureCtrl = expressAsyncHandler(()=>{
+  throw new AppError("Facebook Authentication Failed")
+})
+const facebookAuthSuccessCtrl = expressAsyncHandler((req, res)=>{
+  res.json(req.user)
+})
 
 // -------------------------------------
 // Login
@@ -128,6 +137,10 @@ const userLoginCtrl = expressAsyncHandler(async (req, res) => {
 module.exports = {
   register: userRegisterCtrl,
   login: userLoginCtrl,
+  google_failure: googleAuthFailureCtrl,
+  google_success: googleAuthSuccessCtrl,
+  facebook_failure: facebookAuthFailureCtrl,
+  facebook_success: facebookAuthSuccessCtrl
   // profile: fetchProfile,
   // friend: fetchFriend,
   // deleteUser: deleteUserCtrl,

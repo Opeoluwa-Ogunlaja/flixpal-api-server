@@ -1,6 +1,6 @@
 const express = require('express')
 // const { register, login, deleteUser, logout, profile } = require('../controllers/user')
-const { register, login } = require('../controllers/user')
+const { register, login, google_failure, google_success, facebook_failure,facebook_success } = require('../controllers/user')
 const { authMiddleware, mustAuthMiddleware } = require('../middlewares/auth/authMiddleware')
 const userRouter = express.Router()
 const passport = require('passport')
@@ -21,24 +21,36 @@ userRouter.get('/google',
     }
     ));
 
-// Call back route
+// Google Call back route
 userRouter.get('/google/callback',
     passport.authenticate('google', {
         failureRedirect: getUrlFromPath('google-auth-failed', 'auth'),
     }),
     function (req, res) {
         res.redirect(getUrlFromPath('google-auth-success', 'auth'))
-
     }
 );
 
-userRouter.get('/google-auth-failed', async (req, res) => {
-    res.send('Failed')
-})
+userRouter.get('/google-auth-failed', google_failure)
 
-userRouter.get('/google-auth-success', async (req, res) => {
-    res.json(req.user)
-})
+userRouter.get('/google-auth-success', google_success)
+
+userRouter.get('/facebook',
+    passport.authenticate('facebook', { scope: ['user_friends', 'manage_pages'] }));
+
+// Facebook Call back route
+userRouter.get('/facebook/callback',
+    passport.authenticate('facebook', {
+        failureRedirect: getUrlFromPath('facebook-auth-failed', 'auth'),
+    }),
+    function (req, res) {
+        res.redirect(getUrlFromPath('facebook-auth-success', 'auth'))
+    }
+);
+
+userRouter.get('/facebook-auth-failed', facebook_failure)
+
+userRouter.get('/facebook-auth-success', facebook_success)
 
 // Profile route
 // userRouter.get('/profile', authMiddleware, mustAuthMiddleware , profile)

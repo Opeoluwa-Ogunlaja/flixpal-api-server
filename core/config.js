@@ -3,7 +3,8 @@ const port = process.env.PORT
 const jwtSecret = process.env.JWT_SECRET
 const served = process.env.NODE_ENV == 'serve'
 const GclientID = process.env.GclientID, GclientSecret = process.env.GclientSecret;
-const siteAddress = "https://flixpal-dev.onrender.com";
+const FclientID = process.env.FclientID, FclientSecret = process.env.FclientSecret;
+const siteAddress = "http://localhost:3000";
 
 module.exports = {
     mongoUrl,
@@ -11,6 +12,8 @@ module.exports = {
     jwtSecret,
     served,
     GclientID,
+    FclientID,
     GclientSecret,
+    FclientSecret,
     siteAddress
 }
