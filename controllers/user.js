@@ -4,6 +4,7 @@ const validateMongodbId = require("../core/validateMongodbId");
 const User = require("../models/User");
 const { AppError } = require("../utils/AppErrors");
 const passport = require('passport')
+const { served } = require('../core/config')
 
 require('./facebook-auth-strategy');
 require('./google-auth-strategy');
@@ -48,21 +49,62 @@ const userRegisterCtrl = expressAsyncHandler(async (req, res) => {
 // -------------------------------------
 // Google Auth Ctrls
 // -------------------------------------
-const googleAuthFailureCtrl = expressAsyncHandler(()=>{
+const googleAuthFailureCtrl = expressAsyncHandler(async ()=>{
   throw new AppError("Google Authentication Failed")
 })
-const googleAuthSuccessCtrl = expressAsyncHandler((req, res)=>{
-  res.json(req.user)
+
+const parseSocial = expressAsyncHandler(async (req, res) => {
+  const { provider, id } = req?.user
+  const { email, given_name = '', family_name = '', email_verified } = req.user._json
+  const userFound = await User.findOne({provider, providerId: id})
+  if (userFound){
+    res.cookie("login_token", generateToken(userFound?._id), {
+      maxAge: 1000 * 60 * 60 * 24 * 10,
+      secure: served,
+      path: "/",
+      httpOnly: true,
+    })
+    .json({
+      id: userFound?._id,
+      email: userFound?.email,
+    })
+  } 
+  else{
+    try {
+      const user = await new User({
+        email,
+        provider,
+        providerId: id,
+        firstName:given_name,
+        lastName: family_name,
+        verified: email_verified
+      });
+  
+      await user.save();
+  
+      res.status(201).json({
+        id: user?._id,
+        email: user?.email,
+      });
+  
+    } catch (error) {
+      throw new AppError(error);
+    }
+  }
+})
+
+const googleAuthSuccessCtrl = expressAsyncHandler(async (req, res, next)=>{
+  next(req?.user)
 })
 
 // -------------------------------------
 // Facebook Auth Ctrls
 // -------------------------------------
-const facebookAuthFailureCtrl = expressAsyncHandler(()=>{
+const facebookAuthFailureCtrl = expressAsyncHandler(async ()=>{
   throw new AppError("Facebook Authentication Failed")
 })
-const facebookAuthSuccessCtrl = expressAsyncHandler((req, res)=>{
-  res.json(req.user)
+const facebookAuthSuccessCtrl = expressAsyncHandler(async (req, res, next)=>{
+  next(req.user)
 })
 
 // -------------------------------------
@@ -108,7 +150,7 @@ const userLoginCtrl = expressAsyncHandler(async (req, res) => {
 // const fetchFriend = expressAsyncHandler(async (req, res) => {
 
 //   try {
-//     const friend = await User.findById(req.user.friend).select('username lastLogin')
+//     const friend = await User.findById(req.user.friend).select('email lastLogin')
 //     if (!friend) throw new AppError('An Error occured');
 
 //     res.json(friend)
@@ -140,7 +182,8 @@ module.exports = {
   google_failure: googleAuthFailureCtrl,
   google_success: googleAuthSuccessCtrl,
   facebook_failure: facebookAuthFailureCtrl,
-  facebook_success: facebookAuthSuccessCtrl
+  facebook_success: facebookAuthSuccessCtrl,
+  parseSocial
   // profile: fetchProfile,
   // friend: fetchFriend,
   // deleteUser: deleteUserCtrl,
