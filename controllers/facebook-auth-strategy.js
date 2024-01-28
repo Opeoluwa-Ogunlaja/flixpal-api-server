@@ -7,7 +7,7 @@ passport.use(new FacebookStrategy({
     clientID: FclientID,
     clientSecret: FclientSecret,
     callbackURL: getUrlFromPath("facebook/callback", 'auth', true),
-    enableProof: true
+    state: true
   },
   function(accessToken, refreshToken, profile, done) {
       return done(null, profile);

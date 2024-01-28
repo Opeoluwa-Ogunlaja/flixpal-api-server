@@ -70,6 +70,8 @@ const parseSocial = expressAsyncHandler(async (req, res) => {
       id: userFound?._id,
       email: userFound?.email,
     })
+
+    console.log(userFound)
   } 
   else{
     try {
@@ -85,7 +87,6 @@ const parseSocial = expressAsyncHandler(async (req, res) => {
       await user.save();
   
       res.redirect(getUrlFromPath('/', 'base', true))
-  
     } catch (error) {
       throw new AppError(error);
     }
