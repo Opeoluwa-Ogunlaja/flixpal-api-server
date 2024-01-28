@@ -4,7 +4,9 @@ const validateMongodbId = require("../core/validateMongodbId");
 const User = require("../models/User");
 const { AppError } = require("../utils/AppErrors");
 const passport = require('passport')
-const { served } = require('../core/config')
+const { served } = require('../core/config');
+const { getUrlFromPath } = require("../utils/urlUtils");
+const crypto = require('crypto');
 
 require('./facebook-auth-strategy');
 require('./google-auth-strategy');
@@ -82,10 +84,7 @@ const parseSocial = expressAsyncHandler(async (req, res) => {
   
       await user.save();
   
-      res.status(201).json({
-        id: user?._id,
-        email: user?.email,
-      });
+      res.redirect(getUrlFromPath('/', 'base', true))
   
     } catch (error) {
       throw new AppError(error);
@@ -133,48 +132,86 @@ const userLoginCtrl = expressAsyncHandler(async (req, res) => {
   }
 });
 
-// // Fetch User
-// const fetchProfile = expressAsyncHandler(async (req, res) => {
-//   const user = req.user;
+// ------------------------------------------
+// Generate verification token
+// ------------------------------------------
+const generateVerificationTokenCtrl = expressAsyncHandler(async (req, res) => {
+  const { id } = req?.params;
+  validateMongodbId(id);
+  const userFound = await User.findById(id);
+  if (!userFound) throw new AppError("User does not exist", 404);
+  if (userFound.verified) throw new AppError('Account is already verified', 403) 
 
-//   try {
-//     const userCondensed = await User.findById(user.id, { words: { $slice: [0, 8]}}).populate({ path: 'words', sort: '-updatedAt' }).exec()
+  try { 
+    const token = await userFound.createAccountVerificationToken();
+    await userFound.save();
+    // const send = await sendTokenMail(userFound.email, true, token);
+    // res.status(201).json("Email sent successfully");
+    res.json({token})
+  } catch (error) {
+    throw new AppError(error)
+  }
+});
 
-//     res.json({...userCondensed.toObject({ virtuals: true }), wordsToday: await userCondensed.wordsToday})
-//   } catch (error) {
-//     throw new AppError(error)
-//   }
-// })
+// ------------------------------------------
+// Parsing verication token and account verification
+// ------------------------------------------
+const verifyAccountCtrl = expressAsyncHandler(async (req, res) => {
+  const { token, user } = req?.query;
 
-// // Fetxh User friend 
-// const fetchFriend = expressAsyncHandler(async (req, res) => {
+  if(!token || !user) throw new AppError('Invalid request', 403)
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-//   try {
-//     const friend = await User.findById(req.user.friend).select('email lastLogin')
-//     if (!friend) throw new AppError('An Error occured');
+  const userFound = await User.findOne({
+    _id: user,
+    accountVerificationToken: hashedToken,
+    accountVerificationTokenExpires: { $gt: new Date() },
+  }).select('-password');
 
-//     res.json(friend)
-//   } catch (error) {
-//     throw new AppError(error)
-//   }
-// })
+  if (!userFound) throw new Error("Token expired, try again later");
 
-// // Delete user
-// // ------------------------------------------
-// const deleteUserCtrl = expressAsyncHandler(async (req, res) => {
-//   const { id } = req?.user;
+  try {
+    userFound.verified = true;
+    userFound.accountVerificationToken = undefined;
+    userFound.accountVerificationTokenExpires = undefined;
+    await userFound.save();
 
-//   try {
-//     const user = await User.findByIdAndDelete(id);
-//     res.json(user);
-//   } catch (error) {
-//     throw new AppError(error);
-//   }
-// });
+    res.json(userFound); 
+  } catch (error) {
+    throw new AppError(error)
+  }
+});
 
-// const logoutUserCtrl = expressAsyncHandler(async (req, res) => {
-//   res.clearCookie("SIT").json("successfully logged out");
-// });
+// Fetch User
+const fetchProfile = expressAsyncHandler(async (req, res) => {
+  const user = req.user;
+
+  try {
+    const userCondensed = await User.findById(user.id)
+
+    res.json({ ...userCondensed.toObject({ virtuals: true }) })
+  } catch (error) {
+    throw new AppError(error)
+  }
+})
+
+// Delete user
+// ------------------------------------------
+const deleteUserCtrl = expressAsyncHandler(async (req, res) => {
+  const { id } = req?.user;
+
+  try {
+    const user = await User.findByIdAndDelete(id);
+    res.json(user);
+  } catch (error) {
+    throw new AppError(error);
+  }
+});
+
+const logoutUserCtrl = expressAsyncHandler(async (req, res) => {
+  res.session.user = null
+  res.clearCookie("login_token").json("successfully logged out");
+});
 
 module.exports = {
   register: userRegisterCtrl,
@@ -183,9 +220,10 @@ module.exports = {
   google_success: googleAuthSuccessCtrl,
   facebook_failure: facebookAuthFailureCtrl,
   facebook_success: facebookAuthSuccessCtrl,
-  parseSocial
-  // profile: fetchProfile,
-  // friend: fetchFriend,
-  // deleteUser: deleteUserCtrl,
-  // logout: logoutUserCtrl
+  parseSocial,
+  profile: fetchProfile,
+  deleteUser: deleteUserCtrl,
+  logout: logoutUserCtrl,
+  generate_verify: generateVerificationTokenCtrl,
+  verify: verifyAccountCtrl
 };

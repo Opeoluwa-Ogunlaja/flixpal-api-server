@@ -24,7 +24,9 @@ const userSchema = new mongoose.Schema(
     verified: {
       type: Boolean,
       default: false
-    }
+    },
+    accountVerificationToken: String,
+    accountVerificationTokenExpires: Date,
   },
   {
     timestamps: {
@@ -56,7 +58,21 @@ userSchema.methods.isPasswordMatched = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
+userSchema.methods.createAccountVerificationToken = async function () {
+  const verificationToken = Array(4).fill(0).map((slot) => {
+    return crypto.randomInt(9).toString()
+  }).join('');
+  this.accountVerificationToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+
+  this.accountVerificationTokenExpires = Date.now() + 30 * 60 * 1000;
+
+  return verificationToken;
+};
+
 const User = mongoose.model("User", userSchema);
 
 
-module.exports = User
+module.exports = User;

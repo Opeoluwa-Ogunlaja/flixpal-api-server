@@ -9,6 +9,7 @@ const { mongoStore } = require('./sessionStore')
 const userRouter = require('../routes/usersRoute')
 const passport = require('passport')
 const { getUrlFromPath } = require('../utils/urlUtils')
+const { authMiddleware, mustAuthMiddleware } = require('../middlewares/auth/authMiddleware')
 
 const app = express()
 
@@ -44,13 +45,12 @@ app.use(cookieParser())
 
 app.use(getUrlFromPath('', 'auth'), userRouter)
 
-// app.get('/', authMiddleware, mustAuthMiddleware, (req, res) => {
-//     return res.json({
-//         username: req?.user?.username,
-//         email: req?.user?.email,
-//         id: req?.user?._id
-//     })
-// })
+app.get('/', authMiddleware, mustAuthMiddleware, (req, res) => {
+    return res.json({
+        email: req?.user?.email,
+        id: req?.user?._id
+    })
+})
 
 // Error handlers
 app.use(notFound)

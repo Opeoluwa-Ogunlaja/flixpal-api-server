@@ -1,6 +1,6 @@
 const express = require('express')
 // const { register, login, deleteUser, logout, profile } = require('../controllers/user')
-const { register, login, google_failure, google_success, facebook_failure,facebook_success, parseSocial } = require('../controllers/user')
+const { register, login, google_failure, google_success, facebook_failure,facebook_success, parseSocial, generate_verify, verify } = require('../controllers/user')
 const { authMiddleware, mustAuthMiddleware } = require('../middlewares/auth/authMiddleware')
 const userRouter = express.Router()
 const passport = require('passport')
@@ -51,6 +51,10 @@ userRouter.get('/facebook/callback',
 userRouter.get('/facebook-auth-failed', facebook_failure)
 
 userRouter.get('/facebook-auth-success', parseSocial)
+
+userRouter.get('/generate-verify/:id', generate_verify)
+
+userRouter.patch('/verify', verify)
 
 // Profile route
 // userRouter.get('/profile', authMiddleware, mustAuthMiddleware , profile)
