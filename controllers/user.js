@@ -7,6 +7,7 @@ const passport = require('passport')
 const { served } = require('../core/config');
 const { getUrlFromPath } = require("../utils/urlUtils");
 const crypto = require('crypto');
+const { sendTokenMail } = require("../utils/email/sendEmail");
 
 require('./facebook-auth-strategy');
 require('./google-auth-strategy');
@@ -146,9 +147,8 @@ const generateVerificationTokenCtrl = expressAsyncHandler(async (req, res) => {
   try { 
     const token = await userFound.createAccountVerificationToken();
     await userFound.save();
-    // const send = await sendTokenMail(userFound.email, true, token);
-    // res.status(201).json("Email sent successfully");
-    res.json({token})
+    const send = await sendTokenMail(userFound.email, true, token);
+    res.status(201).json("Email sent successfully");
   } catch (error) {
     throw new AppError(error)
   }
@@ -175,6 +175,53 @@ const verifyAccountCtrl = expressAsyncHandler(async (req, res) => {
     userFound.verified = true;
     userFound.accountVerificationToken = undefined;
     userFound.accountVerificationTokenExpires = undefined;
+    await userFound.save();
+
+    res.json(userFound); 
+  } catch (error) {
+    throw new AppError(error)
+  }
+});
+
+// ------------------------------------------
+// Generate password token
+// ------------------------------------------
+const generatePasswordResetTokenCtrl = expressAsyncHandler(async (req, res) => {
+  const { id } = req?.params;
+  validateMongodbId(id);
+  const userFound = await User.findById(id);
+  if (!userFound) throw new AppError("User does not exist", 404);
+
+  try { 
+    const token = await userFound.createPasswordResetToken();
+    await userFound.save();
+    const send = await sendTokenMail(userFound.email, true, token);
+    res.status(201).json("Email sent successfully");
+  } catch (error) {
+    throw new AppError(error)
+  }
+});
+
+// ------------------------------------------
+// Parsing password token and password reset
+// ------------------------------------------
+const resetPasswordCtrl = expressAsyncHandler(async (req, res) => {
+  const { token, user } = req?.body;
+
+  if(!token || !user) throw new AppError('Invalid request', 403)
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const userFound = await User.findOne({
+    _id: user,
+    passwordResetToken: hashedToken,
+    passwordResetTokenExpires: { $gt: new Date() },
+  }).select('-password');
+
+  if (!userFound) throw new Error("Token expired, try again later");
+
+  try {
+    userFound.passwordResetToken = undefined;
+    userFound.passwordResetTokenExpires = undefined;
     await userFound.save();
 
     res.json(userFound); 
@@ -226,5 +273,7 @@ module.exports = {
   deleteUser: deleteUserCtrl,
   logout: logoutUserCtrl,
   generate_verify: generateVerificationTokenCtrl,
-  verify: verifyAccountCtrl
+  verify: verifyAccountCtrl,
+  generate_password_token: generatePasswordResetTokenCtrl,
+  reset_password: resetPasswordCtrl
 };

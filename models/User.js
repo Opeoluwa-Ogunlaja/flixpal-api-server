@@ -27,6 +27,9 @@ const userSchema = new mongoose.Schema(
     },
     accountVerificationToken: String,
     accountVerificationTokenExpires: Date,
+
+    passwordResetToken: String,
+    passwordResetTokenExpires: Date,
   },
   {
     timestamps: {
@@ -68,6 +71,20 @@ userSchema.methods.createAccountVerificationToken = async function () {
     .digest("hex");
 
   this.accountVerificationTokenExpires = Date.now() + 30 * 60 * 1000;
+
+  return verificationToken;
+};
+
+userSchema.methods.createPasswordResetToken = async function () {
+  const verificationToken = Array(4).fill(0).map((slot) => {
+    return crypto.randomInt(9).toString()
+  }).join('');
+  this.passwordResetToken = crypto
+    .createHash("sha256")
+    .update(verificationToken)
+    .digest("hex");
+
+  this.passwordResetTokenExpires = Date.now() + 30 * 60 * 1000;
 
   return verificationToken;
 };
