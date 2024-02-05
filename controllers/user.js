@@ -4,7 +4,7 @@ const validateMongodbId = require("../core/validateMongodbId");
 const User = require("../models/User");
 const { AppError } = require("../utils/AppErrors");
 const passport = require('passport')
-const { served } = require('../core/config');
+const { served, loginTokenName } = require('../core/config');
 const { getUrlFromPath } = require("../utils/urlUtils");
 const crypto = require('crypto');
 const { sendTokenMail } = require("../utils/email/sendEmail");
@@ -60,8 +60,9 @@ const parseSocial = expressAsyncHandler(async (req, res) => {
   const { provider, id } = req?.user
   const { email, given_name = '', family_name = '', email_verified } = req.user._json
   const userFound = await User.findOne({provider, providerId: id})
+  res.user, req.session.user = null;
   if (userFound){
-    res.cookie("login_token", generateToken(userFound?._id), {
+    res.cookie(loginTokenName, generateToken(userFound?._id), {
       maxAge: 1000 * 60 * 60 * 24 * 10,
       secure: served,
       path: "/",
@@ -206,7 +207,7 @@ const generatePasswordResetTokenCtrl = expressAsyncHandler(async (req, res) => {
 // Parsing password token and password reset
 // ------------------------------------------
 const resetPasswordCtrl = expressAsyncHandler(async (req, res) => {
-  const { token, user } = req?.body;
+  const { token, user, password } = req?.body;
 
   if(!token || !user) throw new AppError('Invalid request', 403)
   const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
@@ -222,6 +223,7 @@ const resetPasswordCtrl = expressAsyncHandler(async (req, res) => {
   try {
     userFound.passwordResetToken = undefined;
     userFound.passwordResetTokenExpires = undefined;
+    userFound.password = password
     await userFound.save();
 
     res.json(userFound); 
@@ -238,6 +240,24 @@ const fetchProfile = expressAsyncHandler(async (req, res) => {
     const userCondensed = await User.findById(user.id)
 
     res.json({ ...userCondensed.toObject({ virtuals: true }) })
+  } catch (error) {
+    throw new AppError(error)
+  }
+})
+
+// Update User
+const updateProfile = expressAsyncHandler(async (req, res) => {
+  const user = req.user;
+  const { phone_number, date_of_birth, gender } = req.body
+
+  try {
+    const newUser = User.findByIdAndUpdate(user, {
+      phone_number, date_of_birth, gender
+    }, {
+      new: true
+    })
+
+    res.json(newUser.toObject({ virtuals: true }))
   } catch (error) {
     throw new AppError(error)
   }

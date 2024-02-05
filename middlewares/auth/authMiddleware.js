@@ -3,13 +3,12 @@ const jwt = require("jsonwebtoken");
 const validateMongodbId = require("../../core/validateMongodbId");
 const User = require("../../models/User");
 const { AppError } = require("../../utils/AppErrors");
-const { jwtSecret } = require("../../core/config");
-const updateStreak = require("../../utils/updateStreak");
+const { jwtSecret, loginTokenName } = require("../../core/config");
 
 const authMiddleware = expressAsyncHandler(async (req, res, next) => {
     let token;
-    if (req?.cookies['Car__SIT']) {
-            token = req?.cookies['Car__SIT'];
+    if (req?.cookies[loginTokenName]) {
+            token = req?.cookies[loginTokenName];
             if (token) {
                 const decoded = jwt.verify(token, jwtSecret);
                 const isValidId = validateMongodbId(decoded._id);
@@ -19,7 +18,6 @@ const authMiddleware = expressAsyncHandler(async (req, res, next) => {
                     const user = await User.findById(decoded?._id).select("-password");
                     // Attatch the user to the request object
                     req.user = user;
-                    updateStreak(req.user.id)
                 } catch (error) {
                     req.user =  false                
                 }
