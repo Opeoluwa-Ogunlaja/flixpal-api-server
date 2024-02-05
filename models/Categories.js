@@ -35,22 +35,22 @@ categorySchema.virtual('moviesCount', {
 categorySchema.pre('findOneAndDelete', async function(next){
     const category = this.getQuery()._id;
     try { 
-        const iphonesFound = await Iphone.find({ categories: { $in: category } })
+        // const iphonesFound = await Iphone.find({ categories: { $in: category } })
 
-        for (let i = 0; i < iphonesFound.length; i++) {
-            const iphone = iphonesFound[i];
-            if (iphone.categories.length === 1) {
-                iphone.published = false;
-                iphone['published_at'] = undefined
-                await iphone.save()
-            }
-        }
+        // for (let i = 0; i < iphonesFound.length; i++) {
+        //     const iphone = iphonesFound[i];
+        //     if (iphone.categories.length === 1) {
+        //         iphone.published = false;
+        //         iphone['published_at'] = undefined
+        //         await iphone.save()
+        //     }
+        // }
 
-        const iphones = await Iphone.updateMany({ categories: { $in: category } }, {
-            $pull: { categories: category },
-        })
+        // const iphones = await Iphone.updateMany({ categories: { $in: category } }, {
+        //     $pull: { categories: category },
+        // })
 
-        next()
+        // next()
     } catch (error) {
         next(error)
     }

@@ -25,6 +25,7 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    country: String,
     accountVerificationToken: String,
     accountVerificationTokenExpires: Date,
 
